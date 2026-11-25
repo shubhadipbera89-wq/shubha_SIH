@@ -1,0 +1,203 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id @default(uuid())
+  name             String
+  email            String   @unique
+  password         String
+  mobile           String?
+  state            String   @default("Jharkhand")
+  district         String
+  userType         String   // Citizen, Student, Researcher, University Faculty, Industry Professional, NGO, Government Representative
+  role             String   @default("USER") // USER, ADMIN
+  bio              String?
+  city             String?
+  institution      String?
+  company          String?
+  website          String?
+  skills           String   @default("[]") // JSON string of array
+  interests        String   @default("[]") // JSON string of array
+  impactScore      Int      @default(0)
+  avatar           String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  challenges       Challenge[]
+  solutions        Solution[]
+  comments         Comment[]
+  supports         Support[]
+  savedChallenges  SavedChallenge[]
+  sentCollabs      Collaboration[]  @relation("SentCollaborations")
+  receivedCollabs  Collaboration[]  @relation("ReceivedCollaborations")
+  notifications    Notification[]
+  achievements     Achievement[]
+  reports          Report[]
+}
+
+model Challenge {
+  id             String   @id @default(uuid())
+  title          String
+  description    String
+  category       String
+  district       String
+  block          String?
+  village        String?
+  location       String?
+  images         String   @default("[]") // JSON array of URLs
+  impact         String?
+  peopleAffected Int      @default(0)
+  urgency        String   @default("Medium") // Low, Medium, High, Critical
+  status         String   @default("Submitted") // Submitted, Under Review, Open for Solutions, In Progress, Implemented, Resolved
+  tags           String   @default("[]") // JSON string array
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  solutions       Solution[]
+  comments        Comment[]
+  supports        Support[]
+  savedChallenges SavedChallenge[]
+  collaborations  Collaboration[]
+}
+
+model Solution {
+  id                String   @id @default(uuid())
+  title             String
+  description       String
+  approach          String
+  resources         String?
+  estimatedCost     String?
+  estimatedTimeline String?
+  expectedImpact    String?
+  skillsRequired    String   @default("[]") // JSON string array
+  teamMembers       String   @default("[]") // JSON string array
+  status            String   @default("Submitted") // Submitted, Under Review, Shortlisted, Pilot, Implemented, Rejected
+  challengeId       String
+  challenge         Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+}
+
+model Comment {
+  id          String   @id @default(uuid())
+  content     String
+  challengeId String
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentId    String?
+  likes       Int      @default(0)
+  flagged     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+model Support {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challengeId String
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, challengeId])
+}
+
+model SavedChallenge {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  challengeId String
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, challengeId])
+}
+
+model Collaboration {
+  id          String   @id @default(uuid())
+  senderId    String
+  sender      User      @relation("SentCollaborations", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId  String
+  receiver    User      @relation("ReceivedCollaborations", fields: [receiverId], references: [id], onDelete: Cascade)
+  challengeId String?
+  challenge   Challenge? @relation(fields: [challengeId], references: [id], onDelete: SetNull)
+  status      String   @default("Pending") // Pending, Accepted, Rejected
+  message     String
+  roleNeeded  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model University {
+  id                  String   @id @default(uuid())
+  name                String
+  code                String   @unique
+  district            String
+  location            String
+  departments         String   @default("[]") // JSON string
+  researchAreas       String   @default("[]") // JSON string
+  facultyCount        Int      @default(0)
+  studentProjectsCount Int     @default(0)
+  website             String?
+  logo                String?
+  description         String
+  createdAt           DateTime @default(now())
+}
+
+model Industry {
+  id                  String   @id @default(uuid())
+  name                String
+  code                String   @unique
+  district            String
+  sector              String
+  sponsoredProjects   Int      @default(0)
+  resourcesOffered    String   @default("[]") // JSON array
+  mentorshipAreas     String   @default("[]") // JSON array
+  website             String?
+  logo                String?
+  description         String
+  createdAt           DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  link      String?
+  type      String   @default("info") // info, support, solution, collab, status
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Achievement {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeType   String   // Community Contributor, Problem Solver, Innovation Champion, Collaboration Leader, Impact Maker
+  name        String
+  description String
+  earnedAt    DateTime @default(now())
+}
+
+model Report {
+  id         String   @id @default(uuid())
+  reporterId String
+  reporter   User     @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  targetType String   // Challenge, Solution, Comment
+  targetId   String
+  reason     String
+  status     String   @default("Pending") // Pending, Resolved, Dismissed
+  createdAt  DateTime @default(now())
+}
